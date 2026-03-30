@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quiz</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button onclick="logout()">Logout</button>
+
+<h2>Quiz</h2>
+
+<p id="timer"></p>
+<p id="progress"></p>
+
+<div id="quiz"></div>
+
+<button id="submitBtn" onclick="submitQuiz()">Nộp bài</button>
+
+<div id="result"></div>
+
+<script>
+const user = JSON.parse(localStorage.getItem("user"));
+if (!user || user.role !== "user") {
+  window.location.href = "login.html";
+}
+
+let questions = [];
+let time = 0;
+let timer;
+let submitted = false;
+let maxTime = 60;
+
+function logout() {
+  localStorage.removeItem("user");
+  window.location.href = "login.html";
+}
+
+function startTimer() {
+  time = 0;
+  timer = setInterval(() => {
+    time++;
+    document.getElementById("timer").innerText = "Thời gian: " + time + "s";
+
+    if (time >= maxTime) {
+      clearInterval(timer);
+      alert("Hết giờ!");
+      submitQuiz();
+    }
+  }, 1000);
+}
+
+async function load() {
+  submitted = false;
+  startTimer();
+
+  const res = await fetch("http://127.0.0.1:8000/questions");
+  questions = await res.json();
+
+  let html = "";
+
+  questions.forEach(q => {
+  html += `
+    <div class="question-box">
+      <p class="question-title"><b>${q.question}</b></p>
+  `;
+
+  q.options.forEach(opt => {
+    html += `
+      <label class="option">
+        <input type="radio" name="q${q.id}" value="${opt}" onchange="update()">
+        ${opt}
+      </label><br>
+    `;
+  });
+
+  html += `</div>`;
+});
+
+  document.getElementById("quiz").innerHTML = html;
+  update();
+}
+
+function update() {
+  let count = 0;
+  questions.forEach(q => {
+    if (document.querySelector(`input[name="q${q.id}"]:checked`)) count++;
+  });
+
+  document.getElementById("progress").innerText = `Đã làm: ${count}/${questions.length}`;
+}
+
+function checkAllAnswered() {
+  return questions.every(q =>
+    document.querySelector(`input[name="q${q.id}"]:checked`)
+  );
+}
+
+async function submitQuiz() {
+  if (submitted) {
+    alert("Bạn đã nộp bài rồi!");
+    return;
+  }
+
+  if (!checkAllAnswered()) {
+    alert("Chưa làm hết!");
+    return;
+  }
+
+  submitted = true;
+  clearInterval(timer);
+
+  const answers = questions.map(q => {
+    const selected = document.querySelector(`input[name="q${q.id}"]:checked`);
+    return {
+      question_id: q.id,
+      selected_answer: selected.value
+    };
+  });
+
+  const res = await fetch("http://127.0.0.1:8000/submit", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      username: user.username,
+      answers
+    })
+  });
+
+  const data = await res.json();
+
+  document.querySelectorAll("input").forEach(i => i.disabled = true);
+  document.getElementById("submitBtn").disabled = true;
+
+  let html = `<h3>Điểm: ${data.score}/${data.total}</h3>`;
+  html += `<p>Thời gian: ${time} giây</p>`;
+
+  data.details.forEach(d => {
+    html += `
+      <div class="${d.is_correct ? "correct" : "wrong"}">
+        Câu ${d.question_id}: 
+        Bạn chọn: ${d.selected_answer || "Không chọn"} 
+        → ${d.is_correct ? "Đúng" : "Sai"} 
+        (Đáp án: ${d.correct_answer})
+      </div>
+    `;
+  });
+
+  document.getElementById("result").innerHTML = html;
+}
+
+load();
+</script>
+
+</body>
+</html>

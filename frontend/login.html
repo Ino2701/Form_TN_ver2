@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>Login</h2>
+
+<input id="username" placeholder="username">
+<input id="password" type="password" placeholder="password">
+<button onclick="login()">Login</button>
+
+<p id="msg"></p>
+
+<script>
+async function login() {
+  const res = await fetch("http://127.0.0.1:8000/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      username: username.value,
+      password: password.value
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.role === "admin") {
+    localStorage.setItem("user", JSON.stringify(data));
+    window.location.href = "admin.html";
+  } else if (data.role === "user") {
+    localStorage.setItem("user", JSON.stringify(data));
+    window.location.href = "quiz.html";
+  } else {
+    msg.innerText = "Sai tài khoản";
+  }
+}
+</script>
+
+</body>
+</html>

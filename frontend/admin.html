@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button onclick="logout()">Logout</button>
+<h2>Admin</h2>
+<input id="q" placeholder="Câu hỏi"><br>
+<input id="o1" placeholder="Đáp án 1"><br>
+<input id="o2" placeholder="Đáp án 2"><br>
+<input id="o3" placeholder="Đáp án 3"><br>
+<input id="o4" placeholder="Đáp án 4"><br>
+<input id="c" placeholder="Đáp án đúng"><br>
+
+<button onclick="add()">Thêm</button>
+
+<h3>Điểm user</h3>
+<div id="scores"></div>
+
+<script>
+async function add() {
+  await fetch("http://127.0.0.1:8000/add-question", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      question: q.value,
+      options: [o1.value, o2.value, o3.value, o4.value],
+      correct_answer: c.value
+    })
+  });
+
+  alert("Đã thêm");
+}
+
+async function loadScores() {
+  const res = await fetch("http://127.0.0.1:8000/scores");
+  const data = await res.json();
+
+  scores.innerHTML = data.map(s =>
+    `<p>${s.username}: ${s.score}/${s.total}</p>`
+  ).join("");
+}
+
+loadScores();
+function logout() {
+  localStorage.removeItem("user");
+  window.location.href = "login.html";
+}
+</script>
+
+</body>
+</html>
